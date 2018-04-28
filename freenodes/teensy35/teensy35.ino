@@ -56,6 +56,7 @@ void sound_player_thread()
   pinMode(13, OUTPUT);
   digitalWrite(13, LOW); // LOW: OFF
   while(1) {
+    //scoped mutex
     {
       Threads::Scope m(x_snd_player);
 
@@ -66,7 +67,7 @@ void sound_player_thread()
 
         //
         char filename[13]; //8.3 naming convension! 8+1+3+1 = 13
-        sprintf(filename, "%2d.WAV", song_now);
+        sprintf(filename, "%2d.WAV", song_now); // NN.WAV format!
         //TEST
         Serial.print("play start! : ");
         Serial.println(filename);
@@ -92,7 +93,7 @@ void sound_player_thread()
         // Serial.println("not playing...");
       }
 
-      //problems: delay / wireless network drpping / buzz & temporal stop
+      //problems: delay / wireless network dropping / buzz & temporal stop
     }
 
     //
