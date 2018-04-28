@@ -37,36 +37,102 @@ void receivedCallback(uint32_t from, String & msg) { // needed to be exist
   //i2c
   msg.toCharArray(cmdstr, CMD_BUFF_LEN);
 
-  // //TEST
-  // Serial.print("message! : ");
-  // Serial.println(msg);
-  // //
-  // Serial.print("cmdstr! : ");
-  // Serial.println(cmdstr);
-
   Wire.beginTransmission(i2c_addr);
   int nb = Wire.write(cmdstr);
   Wire.endTransmission();
-
-  // // TEST
-  // Serial.print("bytes sent : ");
-  // Serial.println(nb);
 }
 
+//tasks
+Scheduler runner;
+//
+// LED status indication
+//
+// operation modes
+//
+// 0 - booted. and running. no connection. scanning.
+// 1 - + connected.
+// 2 - + got a message.
+//
+// notifying patterns
+//
+// 0 - steady on
+// 1 - slow blinking (syncronized)
+// 2 - fast blinking for N times
+//
+#define LED_PIN 2 // built-in LED
+#define LED_PERIOD 1000
+#define LED_ONTIME 100
+bool onFlag = false;
+Task statusblinks(0, 1, &taskStatusBlink_steadyOn); // at start, steady on. default == disabled. ==> setup() will enable.
+// when disconnected, steadyon.
+void taskStatusBlink_steadyOn() {
+  onFlag = true;
+}
+// blink per 1s. sync-ed.
+void taskStatusBlink_slowblink_insync() {
+  // toggler
+  if (onFlag) {
+    onFlag = false;
+  }
+  else {
+    onFlag = true;
+  }
+  // on-time
+  statusblinks.delay(LED_ONTIME);
+  // re-enable & sync.
+  if (statusblinks.isLastIteration()) {
+    statusblinks.setIterations(2); //refill iteration counts
+    statusblinks.enableDelayed(LED_PERIOD - (mesh.getNodeTime() % (LED_PERIOD*1000))/1000); //re-enable with sync-ed delay
+  }
+}
+void taskStatusBlink_fastblink() {
+}
+
+void changedConnectionCallback() {
+  // Serial.println("changed connection");
+  // Serial.print("mesh.getNodeList().size():");
+  // Serial.println(mesh.getNodeList().size());
+  
+  // check status -> modify status LED
+  if (mesh.getNodeList().size() > 0) {
+    // (still) connected.
+    onFlag = false; //reset flag stat.
+    statusblinks.set(LED_PERIOD, 2, &taskStatusBlink_slowblink_insync);
+    statusblinks.enable();
+    // Serial.println("connected!");
+  }
+  else {
+    // disconnected!!
+    statusblinks.set(0, 1, &taskStatusBlink_steadyOn);
+    statusblinks.enable();
+    // Serial.println("disconnected!");
+  }
+}
+ 
 void setup() {
   //i2c master
   Wire.begin();
 
+  //led
+  pinMode(LED_PIN, OUTPUT);
+
   //mesh
   mesh.setDebugMsgTypes(ERROR | DEBUG | CONNECTION);
-  mesh.init(MESH_SSID, MESH_PASSWORD, MESH_PORT, STA_AP, WIFI_AUTH_WPA2_PSK, MESH_CHANNEL);
+  mesh.init(MESH_SSID, MESH_PASSWORD, &runner, MESH_PORT, STA_AP, WIFI_AUTH_WPA2_PSK, MESH_CHANNEL);
   //callbacks
   mesh.onReceive(&receivedCallback);
+  mesh.onChangedConnections(&changedConnectionCallback);
+
+  //tasks
+  runner.addTask(statusblinks);
+  statusblinks.enable();
 
   //serial
   Serial.begin(9600);
 }
 
 void loop() {
+  runner.execute();
   mesh.update();
+  digitalWrite(LED_PIN, !onFlag); // value == false is ON. so onFlag == true is ON. (pull-up)
 }

@@ -52,34 +52,47 @@ volatile int song_now = 0;
 Threads::Mutex x_snd_player;
 void sound_player_thread()
 {
-  //sound file list
-  char files[5][7] = {"01.WAV", "02.WAV", "03.WAV", "04.WAV", "05.WAV"};
-
   //thread loop
   pinMode(13, OUTPUT);
-  digitalWrite(13, HIGH);
+  digitalWrite(13, LOW); // LOW: OFF
   while(1) {
     {
       Threads::Scope m(x_snd_player);
 
       if (is_play_start_req == true) {
         is_play_start_req = false;
+        //TEST
         Serial.println("play acknowledged.");
 
         //
-        playSdWav1.play(files[song_now]);
-        // playSdWav1.play("01.wav");
-        digitalWrite(13, HIGH);
+        char filename[13]; //8.3 naming convension! 8+1+3+1 = 13
+        sprintf(filename, "%2d.WAV", song_now);
+        //TEST
+        Serial.print("play start! : ");
+        Serial.println(filename);
+        //
+        playSdWav1.play(filename);
+        digitalWrite(13, HIGH); // HIGH: ON
+        //
+        threads.delay(10); // to update isPlaying()...
       }
 
       if (is_play_stop_req == true) {
         is_play_stop_req = false;
+        //TEST
+        Serial.println("stop acknowledged.");
         //
         if (playSdWav1.isPlaying() == true) {
           playSdWav1.stop();
         }
-        digitalWrite(13, LOW);
       }
+
+      if (playSdWav1.isPlaying() == false) {
+        digitalWrite(13, LOW); // LOW: OFF
+        // Serial.println("not playing...");
+      }
+
+      //problems: delay / wireless network drpping / buzz & temporal stop
     }
 
     //
@@ -93,12 +106,12 @@ const int i2c_addr = 3;
 void receiveEvent(int numBytes) {
   //numBytes : how many bytes received(==available)
 
-  Serial.println("on receive!");
+  // Serial.println("on receive!");
   int nb = Wire.readBytes(cmdstr, CMD_LENGTH);
-  Serial.print("cmdstr : ");
-  Serial.println(cmdstr);
-  Serial.print("nb : ");
-  Serial.println(nb);
+  // Serial.print("cmdstr : ");
+  // Serial.println(cmdstr);
+  // Serial.print("nb : ");
+  // Serial.println(nb);
 
   if (CMD_LENGTH == nb) { // receive cmdstr.
 
@@ -112,25 +125,24 @@ void receiveEvent(int numBytes) {
 
     //process commands
     if (cmd.equals("NONE")) {
-      //TEST
-      Serial.println("none recognized.");
-      Serial.println("song: " + song);
-      Serial.println("channel: " + channel);
+      // //TEST
+      // Serial.println("none recognized.");
+      // Serial.println("song: " + song);
+      // Serial.println("channel: " + channel);
 
       //do action
       //nothing to do.
     }
     else if (cmd.equals("PLAY")) {
-      //TEST
-      Serial.println("play recognized.");
-      Serial.println("song: " + song);
-      Serial.println("channel: " + channel);
+      // //TEST
+      // Serial.println("play recognized.");
+      // Serial.println("song: " + song);
+      // Serial.println("channel: " + channel);
 
       //do action
       Threads::Scope m(x_snd_player);
       song_now = song.toInt();
       if (song_now > 0) { // 0 is a parsing error
-        song_now = song_now - 1; // the 1st song will be numbered '0'.
         is_play_start_req = true;
       }
       else {
@@ -139,46 +151,44 @@ void receiveEvent(int numBytes) {
       }
     }
     else if (cmd.equals("STOP")) {
-      //TEST
-      Serial.println("stop recognized.");
-      Serial.println("song: " + song);
-      Serial.println("channel: " + channel);
+      // //TEST
+      // Serial.println("stop recognized.");
+      // Serial.println("song: " + song);
+      // Serial.println("channel: " + channel);
 
       //do action
       Threads::Scope m(x_snd_player);
-
-      //TO DO
-
+      is_play_stop_req = true;
+      //TO DO : maybe fade-out needed.
     }
   }
 }
 
-// // dio - TEST
-// const int button_pin = 9;
-void printDirectory(File dir, int numTabs) {
-  while(true) {
-
-    File entry =  dir.openNextFile();
-    if (!entry) {
-      // no more files
-      //Serial.println("**nomorefiles**");
-      break;
-    }
-    for (uint8_t i=0; i<numTabs; i++) {
-      Serial.print('\t');
-    }
-    Serial.print(entry.name());
-    if (entry.isDirectory()) {
-      Serial.println("/");
-      printDirectory(entry, numTabs+1);
-    } else {
-      // files have sizes, directories do not
-      Serial.print("\t\t");
-      Serial.println(entry.size(), DEC);
-    }
-    entry.close();
-  }
-}
+// // SD TEST
+// void printDirectory(File dir, int numTabs) {
+//   while(true) {
+//
+//     File entry =  dir.openNextFile();
+//     if (!entry) {
+//       // no more files
+//       //Serial.println("**nomorefiles**");
+//       break;
+//     }
+//     for (uint8_t i=0; i<numTabs; i++) {
+//       Serial.print('\t');
+//     }
+//     Serial.print(entry.name());
+//     if (entry.isDirectory()) {
+//       Serial.println("/");
+//       printDirectory(entry, numTabs+1);
+//     } else {
+//       // files have sizes, directories do not
+//       Serial.print("\t\t");
+//       Serial.println(entry.size(), DEC);
+//     }
+//     entry.close();
+//   }
+// }
 
 File root;
 void setup() {
@@ -187,25 +197,20 @@ void setup() {
   digitalWrite(15, HIGH); // for i2c pullup
   pinMode(22, OUTPUT);
   digitalWrite(22, HIGH); // for i2c pullup
-  // Wire.setSDA(18);
-  // Wire.setSCL(19);
   Wire.begin(i2c_addr);
   Wire.onReceive(receiveEvent);
   //Wire.onRequest(requestEvent);
 
-  // // dio - TEST
-  // pinMode(button_pin, INPUT); // don't use INPUT_PULLUP with teensy!! HWBUG
-
   delay(1000);
 
-  // SD - TEST
-  if (!SD.begin(BUILTIN_SDCARD)) {
-    Serial.println("initialization failed!");
-    return;
-  }
-  Serial.println("initialization done.");
-  root = SD.open("/");
-  printDirectory(root, 0);
+  // SD TEST
+  // if (!SD.begin(BUILTIN_SDCARD)) {
+  //   Serial.println("initialization failed!");
+  //   return;
+  // }
+  // Serial.println("initialization done.");
+  // root = SD.open("/");
+  // printDirectory(root, 0);
 
   //serial monitor
   Serial.begin(9600);
@@ -229,23 +234,5 @@ void setup() {
 }
 
 void loop() {
-  // // dio - TEST (read button)
-  // static int button = LOW;
-  // static int lastButton = LOW;
-  // button = digitalRead(button_pin);
-  // if (button == HIGH && button != lastButton) { // rising edge
-  //   //
-  //   Serial.println("play recognized.");
-  //   //
-  //   Threads::Scope m(x_snd_player);
-  //   song_now = 1; //song.toInt();
-  //   if (song_now > 0) {       // 0 is a parsing error
-  //     song_now = song_now - 1;       // the 1st song will be numbered '0'.
-  //     is_play_start_req = true;
-  //     Serial.println("play requested.");
-  //   }
-  // }
-  // lastButton = button;
-  //
   delay(5);
 }

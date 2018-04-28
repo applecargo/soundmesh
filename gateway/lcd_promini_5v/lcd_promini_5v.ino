@@ -63,13 +63,14 @@ void periodic() {
   static int lastButton = HIGH;
   button = digitalRead(button_pin);
   if (button == LOW && button != lastButton) { // falling edge
-    strcpy(cmdstr, "PLAY#001@B"); //a new cmd str.
+    strcpy(cmdstr, "PLAY#010@B"); //a new cmd str.
     cmdsent = false;
   }
   lastButton = button;
 
   // lcd
   const char runner[] = {'-', '|'};
+  static char linebuffer[16 + 1];
   // first line
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -79,13 +80,18 @@ void periodic() {
   lcd.print(memberCount, DEC); // members up to 99 // 16
   // second line
   lcd.setCursor(0, 1);
-  lcd.print("CMD:"); // 4
-  lcd.print(cmdstr); // 10
   if (cmdsent == true) {
-    lcd.print(":O");
+    lcd.print(linebuffer); //16
+    lcd.setCursor(14, 1); //14
+    lcd.print(":O"); // +2
   }
   else {
-    lcd.print(":X");
+    lcd.print("CMD:"); // 4
+    strcpy(linebuffer, "CMD:");
+    lcd.print(cmdstr); // 10
+    strcat(linebuffer, cmdstr);
+    lcd.print(":X"); // 2
+    strcat(linebuffer, ":X");
   }
 
   //TEST
