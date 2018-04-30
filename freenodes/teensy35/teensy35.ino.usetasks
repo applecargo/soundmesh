@@ -81,7 +81,7 @@ Task sound_player_start_task(0, TASK_ONCE, sound_player_start);
 Task sound_player_stop_task(0, TASK_ONCE, sound_player_stop);
 Task sound_player_check_task(0, TASK_FOREVER, sound_player_check, &runner, true);
 
-//problems: delay / wireless network dropping / buzz & temporal stop / make many more / resolve speaker off issue
+//problems: delay / wireless network dropping / buzz & temporal stop
 
 
 //i2c
@@ -92,8 +92,8 @@ void receiveEvent(int numBytes) {
 
   // Serial.println("[i2c] on receive!");
   int nb = Wire.readBytes(cmdstr, CMD_LENGTH);
-  Serial.print("[i2c] cmdstr : ");
-  Serial.println(cmdstr);
+  // Serial.print("[i2c] cmdstr : ");
+  // Serial.println(cmdstr);
   // Serial.print("[i2c] nb : ");
   // Serial.println(nb);
 

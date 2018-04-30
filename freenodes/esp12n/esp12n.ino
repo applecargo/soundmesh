@@ -92,7 +92,7 @@ void changedConnectionCallback() {
   // Serial.println("changed connection");
   // Serial.print("mesh.getNodeList().size():");
   // Serial.println(mesh.getNodeList().size());
-  
+
   // check status -> modify status LED
   if (mesh.getNodeList().size() > 0) {
     // (still) connected.
@@ -108,7 +108,7 @@ void changedConnectionCallback() {
     // Serial.println("disconnected!");
   }
 }
- 
+
 void setup() {
   //i2c master
   Wire.begin();

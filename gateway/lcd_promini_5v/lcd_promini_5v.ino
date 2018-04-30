@@ -91,8 +91,9 @@ void periodic() {
   static int select = 0;
   static int analog = 0;
   //
-  select = digitalRead(select_pin);
+  select = !digitalRead(select_pin); // a dirty fix! lazy to re-solder.
   analog = analogRead(analog_pin);
+  analog = 1023 - analog; // a dirty fix! lazy to re-solder.
   // CCCC#SSS@O : CCCC - commands, SSS - song #, O - output select
   sprintf(cmdstr,
           "%s#%03d@B",

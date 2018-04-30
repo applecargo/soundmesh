@@ -66,30 +66,13 @@ void periodic() {
   //fetch cmdstr
   Wire.requestFrom(i2c_addr, CMD_LENGTH); //request cmdstr.
   if (CMD_LENGTH == Wire.readBytes(cmdstr, CMD_LENGTH)) { // receive cmdstr.
-
     //convert to String
     String msg = String(cmdstr);
-
-    //TEST: simple msg. investigation test.
-    String sub = msg.substring(0,4);
-    //
-    Serial.println(msg);
-    //
-    if (sub.equals("NONE")) {
-      Serial.println("none recognized.");
+    //check if valid command
+    if (msg.substring(0,4).equals("NONE") == false) {
+      //broadcast msg(==cmdstr) to the mesh
+      mesh.sendBroadcast(msg);
     }
-    else if (sub.equals("PLAY")) {
-      Serial.println("play recognized.");
-    }
-    else if (sub.equals("STOP")) {
-      Serial.println("stop recognized.");
-    }
-    else {
-      Serial.println("parse error!!");
-    }
-
-    //broadcast msg(==cmdstr) to the mesh
-    mesh.sendBroadcast(msg);
   }
 }
 
