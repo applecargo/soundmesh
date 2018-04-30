@@ -24,6 +24,7 @@ bool newcmd = false;
 
 //lcd
 LiquidCrystal lcd(12, 11, 2, 3, 4, 5);
+bool composingcmd = false;
 
 //i2c
 const int i2c_addr = 8;
@@ -32,13 +33,27 @@ void receiveEvent(int numBytes) {
   memberCount = Wire.read();
 }
 void requestEvent() {
-  Wire.write(cmdstr);
-  cmdsent = true;
-  strcpy(cmdstr, "NONE#SSS@P"); //reset cmd str.
+  if (newcmd == true) {
+    Wire.write(cmdstr);
+    newcmd = false;
+    cmdsent = true;
+  }
+  else {
+    Wire.write("NONE#SSS@P");
+  }
 }
 
 //button
 const int button_pin = 10;
+const int select_pin = 9;
+const int analog_pin = 1; //15
+
+//map
+float mapping(float val, float from_start, float from_end, float to_start, float to_end) {
+  if (val < from_start) return to_start;
+  if (val > from_end) return to_end;
+  return (val - from_start) * (to_end - to_start) / (from_end - from_start) + to_start;
+}
 
 void setup() {
   //lcd
@@ -51,6 +66,8 @@ void setup() {
 
   //button interrupt
   pinMode(button_pin, INPUT_PULLUP);
+  pinMode(select_pin, INPUT_PULLUP);
+  pinMode(analog_pin, INPUT_PULLUP); // PULL UP doesn't work?
 
   //serial monitor
   Serial.begin(115200);
@@ -58,19 +75,43 @@ void setup() {
 
 void periodic() {
 
-  //read button
+  // //TEST
+  // Serial.print("button_pin : ");
+  // Serial.println(digitalRead(button_pin));
+  // Serial.print(", select_pin : ");
+  // Serial.println(digitalRead(select_pin));
+  // Serial.print(", analog_pin : ");
+  // Serial.println(analogRead(analog_pin));
+
+  //user interface - compose the command string
   static int button = HIGH;
   static int lastButton = HIGH;
   button = digitalRead(button_pin);
+  //
+  static int select = 0;
+  static int analog = 0;
+  //
+  select = digitalRead(select_pin);
+  analog = analogRead(analog_pin);
+  // CCCC#SSS@O : CCCC - commands, SSS - song #, O - output select
+  sprintf(cmdstr,
+          "%s#%03d@B",
+          (select ? "PLAY" : "STOP"), //4
+          (unsigned int)mapping(analog, 0, 1024, 1, 21)); //3 - song # range : 001 ~ 020
+
+  // //TEST
+  // Serial.println(cmdstr);
+  //
+  // a triggering 'send' button!
   if (button == LOW && button != lastButton) { // falling edge
-    strcpy(cmdstr, "PLAY#010@B"); //a new cmd str.
+    newcmd = true;
     cmdsent = false;
   }
+  //
   lastButton = button;
 
   // lcd
   const char runner[] = {'-', '|'};
-  static char linebuffer[16 + 1];
   // first line
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -80,18 +121,13 @@ void periodic() {
   lcd.print(memberCount, DEC); // members up to 99 // 16
   // second line
   lcd.setCursor(0, 1);
+  lcd.print("CMD:");   // 4
+  lcd.print(cmdstr);   // 10
   if (cmdsent == true) {
-    lcd.print(linebuffer); //16
-    lcd.setCursor(14, 1); //14
-    lcd.print(":O"); // +2
+    lcd.print(":O"); // 2
   }
   else {
-    lcd.print("CMD:"); // 4
-    strcpy(linebuffer, "CMD:");
-    lcd.print(cmdstr); // 10
-    strcat(linebuffer, cmdstr);
     lcd.print(":X"); // 2
-    strcat(linebuffer, ":X");
   }
 
   //TEST

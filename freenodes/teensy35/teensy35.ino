@@ -18,20 +18,17 @@ bool cmdsent = false;
 bool newcmd = false;
 // shared global (protocol) : end
 
-//teensy SD
-
-//TO DO - try SDIO??
-
-#define SDCARD_CS_PIN    BUILTIN_SDCARD
-#define SDCARD_MOSI_PIN  11  // not actually used
-#define SDCARD_SCK_PIN   13  // not actually used
-
 //teensy audio
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
+
+//teensy 3.5 with SD card
+#define SDCARD_CS_PIN    BUILTIN_SDCARD
+#define SDCARD_MOSI_PIN  11  // not actually used
+#define SDCARD_SCK_PIN   13  // not actually used
 
 // GUItool: begin automatically generated code
 AudioPlaySdWav playSdWav1;               //xy=376,303
@@ -52,45 +49,58 @@ volatile int song_now = 0;
 Threads::Mutex x_snd_player;
 void sound_player_thread()
 {
-  //thread loop
+  //pinMode
   pinMode(13, OUTPUT);
   digitalWrite(13, LOW); // LOW: OFF
+
+  //thread loop
   while(1) {
-    //scoped mutex
     {
       Threads::Scope m(x_snd_player);
 
       if (is_play_start_req == true) {
         is_play_start_req = false;
-        //TEST
-        Serial.println("play acknowledged.");
 
-        //
-        char filename[13]; //8.3 naming convension! 8+1+3+1 = 13
-        sprintf(filename, "%2d.WAV", song_now); // NN.WAV format!
         //TEST
-        Serial.print("play start! : ");
+        Serial.println("[sound_player_thread] play acknowledged.");
+
+        //search for the sound file
+        char filename[13]; //8.3 naming convension! 8+1+3+1 = 13
+        sprintf(filename, "%02d.WAV", song_now); // NN.WAV format!
+
+        //TEST
+        Serial.print("[sound_player_thread] play start! : ");
         Serial.println(filename);
-        //
+
+        //start the player!
         playSdWav1.play(filename);
-        digitalWrite(13, HIGH); // HIGH: ON
-        //
-        threads.delay(10); // to update isPlaying()...
+
+        //mark the indicator : HIGH: ON
+        digitalWrite(13, HIGH);
+
+        //to wait a bit for updating isPlaying()
+        threads.delay(10);
       }
 
       if (is_play_stop_req == true) {
         is_play_stop_req = false;
+
         //TEST
-        Serial.println("stop acknowledged.");
-        //
+        Serial.println("[sound_player_thread] stop acknowledged.");
+
+        //stop the player.
         if (playSdWav1.isPlaying() == true) {
           playSdWav1.stop();
         }
       }
 
       if (playSdWav1.isPlaying() == false) {
-        digitalWrite(13, LOW); // LOW: OFF
-        // Serial.println("not playing...");
+
+        //TEST
+        // Serial.println("[sound_player_thread] not playing...");
+
+        //mark the indicator : LOW: OFF
+        digitalWrite(13, LOW);
       }
 
       //problems: delay / wireless network dropping / buzz & temporal stop
@@ -107,11 +117,11 @@ const int i2c_addr = 3;
 void receiveEvent(int numBytes) {
   //numBytes : how many bytes received(==available)
 
-  // Serial.println("on receive!");
+  // Serial.println("[i2c] on receive!");
   int nb = Wire.readBytes(cmdstr, CMD_LENGTH);
-  // Serial.print("cmdstr : ");
+  // Serial.print("[i2c] cmdstr : ");
   // Serial.println(cmdstr);
-  // Serial.print("nb : ");
+  // Serial.print("[i2c] nb : ");
   // Serial.println(nb);
 
   if (CMD_LENGTH == nb) { // receive cmdstr.
@@ -127,18 +137,18 @@ void receiveEvent(int numBytes) {
     //process commands
     if (cmd.equals("NONE")) {
       // //TEST
-      // Serial.println("none recognized.");
-      // Serial.println("song: " + song);
-      // Serial.println("channel: " + channel);
+      // Serial.println("[i2c] none recognized.");
+      // Serial.println("[i2c] song: " + song);
+      // Serial.println("[i2c] channel: " + channel);
 
       //do action
       //nothing to do.
     }
     else if (cmd.equals("PLAY")) {
       // //TEST
-      // Serial.println("play recognized.");
-      // Serial.println("song: " + song);
-      // Serial.println("channel: " + channel);
+      // Serial.println("[i2c] play recognized.");
+      // Serial.println("[i2c] song: " + song);
+      // Serial.println("[i2c] channel: " + channel);
 
       //do action
       Threads::Scope m(x_snd_player);
@@ -148,14 +158,14 @@ void receiveEvent(int numBytes) {
       }
       else {
         //error!
-        Serial.println("parsing error of 'song' parameter!");
+        Serial.println("[i2c] parsing error of 'song' parameter!");
       }
     }
     else if (cmd.equals("STOP")) {
       // //TEST
-      // Serial.println("stop recognized.");
-      // Serial.println("song: " + song);
-      // Serial.println("channel: " + channel);
+      // Serial.println("[i2c] stop recognized.");
+      // Serial.println("[i2c] song: " + song);
+      // Serial.println("[i2c] channel: " + channel);
 
       //do action
       Threads::Scope m(x_snd_player);
@@ -165,31 +175,31 @@ void receiveEvent(int numBytes) {
   }
 }
 
-// // SD TEST
-// void printDirectory(File dir, int numTabs) {
-//   while(true) {
-//
-//     File entry =  dir.openNextFile();
-//     if (!entry) {
-//       // no more files
-//       //Serial.println("**nomorefiles**");
-//       break;
-//     }
-//     for (uint8_t i=0; i<numTabs; i++) {
-//       Serial.print('\t');
-//     }
-//     Serial.print(entry.name());
-//     if (entry.isDirectory()) {
-//       Serial.println("/");
-//       printDirectory(entry, numTabs+1);
-//     } else {
-//       // files have sizes, directories do not
-//       Serial.print("\t\t");
-//       Serial.println(entry.size(), DEC);
-//     }
-//     entry.close();
-//   }
-// }
+// SD TEST
+void printDirectory(File dir, int numTabs) {
+  while(true) {
+
+    File entry =  dir.openNextFile();
+    if (!entry) {
+      // no more files
+      //Serial.println("**nomorefiles**");
+      break;
+    }
+    for (uint8_t i=0; i<numTabs; i++) {
+      Serial.print('\t');
+    }
+    Serial.print(entry.name());
+    if (entry.isDirectory()) {
+      Serial.println("/");
+      printDirectory(entry, numTabs+1);
+    } else {
+      // files have sizes, directories do not
+      Serial.print("\t\t");
+      Serial.println(entry.size(), DEC);
+    }
+    entry.close();
+  }
+}
 
 File root;
 void setup() {
@@ -202,19 +212,18 @@ void setup() {
   Wire.onReceive(receiveEvent);
   //Wire.onRequest(requestEvent);
 
-  delay(1000);
-
-  // SD TEST
-  // if (!SD.begin(BUILTIN_SDCARD)) {
-  //   Serial.println("initialization failed!");
-  //   return;
-  // }
-  // Serial.println("initialization done.");
-  // root = SD.open("/");
-  // printDirectory(root, 0);
+  //SD - AudioPlaySdWav @ teensy audio library needs SD.begin() first. don't forget/ignore!
+  //+ let's additionally check contents of SD.
+  if (!SD.begin(BUILTIN_SDCARD)) {
+    Serial.println("[sd] initialization failed!");
+    return;
+  }
+  Serial.println("[sd] initialization done.");
+  root = SD.open("/");
+  printDirectory(root, 0);
 
   //serial monitor
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   //audio
   AudioMemory(20);
@@ -231,7 +240,7 @@ void setup() {
   threads.addThread(sound_player_thread);
 
   //
-  Serial.println("setup done.");
+  Serial.println("[setup] done.");
 }
 
 void loop() {
