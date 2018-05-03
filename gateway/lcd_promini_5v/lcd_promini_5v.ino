@@ -119,7 +119,12 @@ void periodic() {
   lcd.print("!soundmesh! "); //12
   lcd.print(runner[millis()%2]); // indicator //13
   lcd.print(" "); // 14
-  lcd.print(memberCount, DEC); // members up to 99 // 16
+  if (memberCount >= 0) {
+    lcd.print(memberCount, DEC); // members up to 99 // 16
+  }
+  else {
+    lcd.print("?"); // unknown // 16
+  }
   // second line
   lcd.setCursor(0, 1);
   lcd.print("CMD:");   // 4
