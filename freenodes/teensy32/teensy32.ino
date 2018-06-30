@@ -25,6 +25,10 @@ bool cmdsent = false;
 bool newcmd = false;
 // shared global (protocol) : end
 
+//set my group
+String mygroup = "C"; //F : flag objects, C : circular objects, A : all objects
+//String mygroup = "F"; //F : flag objects, C : circular objects, A : all objects
+
 //HACK: let auto-poweroff speakers stay turned ON! - (creative muvo mini)
 #define IDLE_FREQ 22000
 #define IDLE_AMP 0.005
@@ -118,44 +122,47 @@ void receiveEvent(int numBytes) {
     //parse command string.
     String cmd = msg.substring(0,4); // 0123
     String song = msg.substring(5,8); // 567
-    String channel = msg.substring(9,10); // 9
+    String group = msg.substring(9,10); // 9
 
     //process commands
-    if (cmd.equals("NONE")) {
-      // //TEST
-      // Serial.println("[i2c] none recognized.");
-      // Serial.println("[i2c] song: " + song);
-      // Serial.println("[i2c] channel: " + channel);
+    if (group == mygroup || group == "A") {
 
-      //do action
-      //nothing to do.
-    }
-    else if (cmd.equals("PLAY")) {
-      // //TEST
-      // Serial.println("[i2c] play recognized.");
-      // Serial.println("[i2c] song: " + song);
-      // Serial.println("[i2c] channel: " + channel);
+      if (cmd.equals("NONE")) {
+        // //TEST
+        // Serial.println("[i2c] none recognized.");
+        // Serial.println("[i2c] song: " + song);
+        // Serial.println("[i2c] group: " + group);
 
-      //do action
-      song_now = song.toInt();
-      if (song_now > 0) { // 0 is a parsing error
-        sound_player_start_task.restart();
+        //do action
+        //nothing to do.
       }
-      else {
-        //error!
-        Serial.println("[i2c] parsing error of 'song' parameter!");
+      else if (cmd.equals("PLAY")) {
+        // //TEST
+        // Serial.println("[i2c] play recognized.");
+        // Serial.println("[i2c] song: " + song);
+        // Serial.println("[i2c] group: " + group);
+
+        //do action
+        song_now = song.toInt();
+        if (song_now > 0) {       // 0 is a parsing error
+          sound_player_start_task.restart();
+        }
+        else {
+          //error!
+          Serial.println("[i2c] parsing error of 'song' parameter!");
+        }
       }
-    }
-    else if (cmd.equals("STOP")) {
-      // //TEST
-      // Serial.println("[i2c] stop recognized.");
-      // Serial.println("[i2c] song: " + song);
-      // Serial.println("[i2c] channel: " + channel);
+      else if (cmd.equals("STOP")) {
+        // //TEST
+        // Serial.println("[i2c] stop recognized.");
+        // Serial.println("[i2c] song: " + song);
+        // Serial.println("[i2c] group: " + group);
 
-      //do action
-      sound_player_stop_task.restart();
+        //do action
+        sound_player_stop_task.restart();
 
-      //TO DO : maybe fade-out needed.
+        //TO DO : maybe fade-out needed.
+      }
     }
   }
 }
@@ -209,7 +216,7 @@ void setup() {
   //+ let's additionally check contents of SD.
   if (!SD.begin(10)) {
     Serial.println("[sd] initialization failed!");
-    return;
+    // return;
   }
   Serial.println("[sd] initialization done.");
   root = SD.open("/");

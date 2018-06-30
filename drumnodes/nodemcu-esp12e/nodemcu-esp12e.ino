@@ -6,29 +6,6 @@
  *   - soundmesh project @ 2018. 04.
  */
 
-//same one but using esp32 chip.
-//problem: i2c stabillity.
-//trial #1: try stickbreaker's arduino-esp32 which is seriously targeting i2c stability
-//trial #2: try encode/decode command bytes. to be single byte. seems RTOS running under the hood (hal) causing problem with i2c strict timing. so i feel good on single bytes according to people's talks.
-
-//first thing first.. : confirm pinout. + stickbreaker (if not work/or unstable) + encode/decode in 1 byte. is my best effort. then we might have to consider different way for communication... sadly.
-
-//a goooood article on esp32 subject.. possibilities.. potentials..!
-// --> https://mjrobot.org/iot-made-simple-playing-with-the-esp32-on-arduino-ide/
-
-//pinout confirmation
-//SDA ==> GPIO 21
-//SCL ==> GPIO 22
-//teensy 3.5 default
-//SDA ==> 18
-//SCL ==> 19
-//so,
-//esp32 ==> teensy 3.5
-// 21 <==> 18
-// 22 <==> 19
-//and!
-//NOTE: esp32 i2c function will drive bus pull-up on the fly! Don't use 3.3k pullups at teensy side! otherwise it won't work.
-
 // shared global (protocol) : begin
 //command (i2c)
 #define CMD_LENGTH 10
@@ -50,6 +27,7 @@ bool newcmd = false;
 #define MESH_PASSWORD "timemachine999"
 #define MESH_PORT 5555
 #define MESH_CHANNEL 5
+// #define MESH_ANCHOR
 
 //i2c
 const int i2c_addr = 3;
@@ -63,9 +41,6 @@ void receivedCallback(uint32_t from, String & msg) { // needed to be exist
   Wire.beginTransmission(i2c_addr);
   int nb = Wire.write(cmdstr);
   Wire.endTransmission();
-
-  //
-  Serial.println("sent.");
 }
 
 //tasks
@@ -145,6 +120,9 @@ void setup() {
   //mesh
   mesh.setDebugMsgTypes(ERROR | DEBUG | CONNECTION);
   mesh.init(MESH_SSID, MESH_PASSWORD, &runner, MESH_PORT, WIFI_AP_STA, MESH_CHANNEL);
+#ifdef MESH_ANCHOR
+  mesh.setContainsRoot(true);
+#endif
   //callbacks
   mesh.onReceive(&receivedCallback);
   mesh.onChangedConnections(&changedConnectionCallback);
@@ -160,5 +138,5 @@ void setup() {
 void loop() {
   runner.execute();
   mesh.update();
-  digitalWrite(LED_PIN, onFlag); // value == true is ON.
+  digitalWrite(LED_PIN, !onFlag); // value == false is ON. so onFlag == true is ON. (pull-up)
 }

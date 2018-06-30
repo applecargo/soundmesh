@@ -118,7 +118,8 @@ void setup() {
 
   //mesh
   mesh.setDebugMsgTypes(ERROR | DEBUG | CONNECTION);
-  mesh.init(MESH_SSID, MESH_PASSWORD, &runner, MESH_PORT, STA_AP, WIFI_AUTH_WPA2_PSK, MESH_CHANNEL);
+  mesh.init(MESH_SSID, MESH_PASSWORD, &runner, MESH_PORT, WIFI_AP_STA, MESH_CHANNEL);
+  mesh.setContainsRoot(true);
   //callbacks
   mesh.onReceive(&receivedCallback);
   mesh.onChangedConnections(&changedConnectionCallback);

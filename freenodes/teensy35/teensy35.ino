@@ -4,6 +4,7 @@
  *   - a I2C Slave and a sounder device.
  *
  *   - soundmesh project @ 2018. 04.
+ *   - adding a motor on/off function. @ 2018. 06.
  */
 
 //problems:
@@ -25,9 +26,14 @@ bool cmdsent = false;
 bool newcmd = false;
 // shared global (protocol) : end
 
+//set my group
+String mygroup = "C"; //F : flag objects, C : circular objects, A : all objects
+//String mygroup = "F"; //F : flag objects, C : circular objects, A : all objects
+
 //HACK: let auto-poweroff speakers stay turned ON! - (creative muvo mini)
 #define IDLE_FREQ 22000
-#define IDLE_AMP 0.005
+//#define IDLE_AMP 0.0050
+#define IDLE_AMP 0 //feature off, since we have wallet power for all. (speakers stays ON while being charged.)
 
 //teensy audio
 #include <Audio.h>
@@ -55,6 +61,9 @@ AudioConnection patchCord5(mixer2, 0, dacs1, 1);
 AudioConnection patchCord6(mixer1, 0, dacs1, 0);
 // GUItool: end automatically generated code
 
+//motor action (fan)
+#define MOTOR_PIN 3
+
 //task
 #include <TaskScheduler.h>
 Scheduler runner;
@@ -75,6 +84,8 @@ void sound_player_start()
   playSdWav1.play(filename);
   //mark the indicator : HIGH: ON
   digitalWrite(13, HIGH);
+  //fan action
+  digitalWrite(MOTOR_PIN, HIGH);
   //to wait a bit for updating isPlaying()
   delay(10);
 }
@@ -82,6 +93,8 @@ void sound_player_stop() {
   //stop the player.
   if (playSdWav1.isPlaying() == true) {
     playSdWav1.stop();
+    //fan stop
+    digitalWrite(MOTOR_PIN, LOW);
   }
 }
 void sound_player_check() {
@@ -122,44 +135,47 @@ void receiveEvent(int numBytes) {
     //parse command string.
     String cmd = msg.substring(0,4); // 0123
     String song = msg.substring(5,8); // 567
-    String channel = msg.substring(9,10); // 9
+    String group = msg.substring(9,10); // 9
 
     //process commands
-    if (cmd.equals("NONE")) {
-      // //TEST
-      // Serial.println("[i2c] none recognized.");
-      // Serial.println("[i2c] song: " + song);
-      // Serial.println("[i2c] channel: " + channel);
+    if (group == mygroup || group == "A") {
 
-      //do action
-      //nothing to do.
-    }
-    else if (cmd.equals("PLAY")) {
-      // //TEST
-      // Serial.println("[i2c] play recognized.");
-      // Serial.println("[i2c] song: " + song);
-      // Serial.println("[i2c] channel: " + channel);
+      if (cmd.equals("NONE")) {
+        // //TEST
+        // Serial.println("[i2c] none recognized.");
+        // Serial.println("[i2c] song: " + song);
+        // Serial.println("[i2c] group: " + group);
 
-      //do action
-      song_now = song.toInt();
-      if (song_now > 0) { // 0 is a parsing error
-        sound_player_start_task.restart();
+        //do action
+        //nothing to do.
       }
-      else {
-        //error!
-        Serial.println("[i2c] parsing error of 'song' parameter!");
+      else if (cmd.equals("PLAY")) {
+        // //TEST
+        // Serial.println("[i2c] play recognized.");
+        // Serial.println("[i2c] song: " + song);
+        // Serial.println("[i2c] group: " + group);
+
+        //do action
+        song_now = song.toInt();
+        if (song_now > 0) {       // 0 is a parsing error
+          sound_player_start_task.restart();
+        }
+        else {
+          //error!
+          Serial.println("[i2c] parsing error of 'song' parameter!");
+        }
       }
-    }
-    else if (cmd.equals("STOP")) {
-      // //TEST
-      // Serial.println("[i2c] stop recognized.");
-      // Serial.println("[i2c] song: " + song);
-      // Serial.println("[i2c] channel: " + channel);
+      else if (cmd.equals("STOP")) {
+        // //TEST
+        // Serial.println("[i2c] stop recognized.");
+        // Serial.println("[i2c] song: " + song);
+        // Serial.println("[i2c] group: " + group);
 
-      //do action
-      sound_player_stop_task.restart();
+        //do action
+        sound_player_stop_task.restart();
 
-      //TO DO : maybe fade-out needed.
+        //TO DO : maybe fade-out needed.
+      }
     }
   }
 }
@@ -190,11 +206,20 @@ void printDirectory(File dir, int numTabs) {
   }
 }
 
+//
 File root;
 void setup() {
+  // //DEBUG:boot testing
+  // pinMode(13, OUTPUT);
+  // digitalWrite(13, LOW); // LOW: OFF
+
   //serial monitor
   Serial.begin(115200);
   delay(50);
+
+  //motor
+  pinMode(MOTOR_PIN, OUTPUT);
+  digitalWrite(MOTOR_PIN, LOW);
 
   //i2c
   //NOTE: But, don't use pull-up registers for esp32 boards. -> esp32 i2c function will drive bus pull-up on the fly!

@@ -1,7 +1,8 @@
 /*
- * a gateway device to the mesh (part1)
+ * a conductor gateway device to the mesh (part1)
  *
  *   - a I2C Slave with LCD screen & Actions controls.
+ *   - and this will have a pre-programmed playlist(actionlist/commandlist).
  *
  *   - soundmesh project @ 2018. 04.
  */
@@ -24,7 +25,6 @@ bool newcmd = false;
 
 //lcd
 LiquidCrystal lcd(12, 11, 2, 3, 4, 5);
-bool composingcmd = false;
 
 //i2c
 const int i2c_addr = 8;
@@ -42,6 +42,37 @@ void requestEvent() {
     Wire.write("NONE#SSS@P");
   }
 }
+
+//commandlist
+const int Ncommands = 3;
+String commandlist[Ncommands] = {
+  "PLAY#001@A",
+  "PLAY#002@A"
+};
+
+//task
+#include <TaskScheduler.h>
+Scheduler taskrunner;
+bool state = false;
+int cmd_ptr = 0;
+void conductor() {
+  //DEBUG
+  state = !state;
+
+  //queue a i2c request
+  commandlist[cmd_ptr].toCharArray(cmdstr, CMD_BUFF_LEN);
+  newcmd = true;
+  cmdsent = false;
+
+  //
+  cmd_ptr += 1;
+  if (cmd_ptr >= Ncommands) {
+    cmd_ptr = 0;
+  }
+}
+#define CONDUCTOR_INTERVAL 360000 // 6 min -> 360 sec -> 360000 millisec
+// #define CONDUCTOR_INTERVAL 1000   // 1 sec. (DEBUG)
+Task conductor_task(CONDUCTOR_INTERVAL, TASK_FOREVER, conductor);
 
 //button
 const int button_pin = 10;
@@ -71,46 +102,28 @@ void setup() {
 
   //serial monitor
   Serial.begin(115200);
+
+  //task
+  taskrunner.init();
+  taskrunner.addTask(conductor_task);
+  conductor_task.enable();
 }
 
 void periodic() {
 
-  // //TEST
-  // Serial.print("button_pin : ");
-  // Serial.println(digitalRead(button_pin));
-  // Serial.print(", select_pin : ");
-  // Serial.println(digitalRead(select_pin));
-  // Serial.print(", analog_pin : ");
-  // Serial.println(analogRead(analog_pin));
+  //play on/off toggle
+  static int select = LOW;
+  static int lastSelect = LOW;
 
-  //user interface - compose the command string
-  static int button = HIGH;
-  static int lastButton = HIGH;
-  button = digitalRead(button_pin);
-  //
-  static int select = 0;
-  static int analog = 0;
-  //
-  select = !digitalRead(select_pin); // a dirty fix! lazy to re-solder.
-  analog = analogRead(analog_pin);
-  analog = 1023 - analog; // a dirty fix! lazy to re-solder.
-  // CCCC#SSS@O : CCCC - commands, SSS - song #, O - output select
-  sprintf(cmdstr,
-          "%s#%03d@%c",
-          (select ? "PLAY" : "STOP"), //4
-          (unsigned int)mapping(analog, 0, 1024, 1, 21), //3 - song # range : 001 ~ 020
-          'A'); //F : flag objects, C : circular objects, A : all objects
-
-  // //TEST
-  // Serial.println(cmdstr);
-  //
-  // a triggering 'send' button!
-  if (button == LOW && button != lastButton) { // falling edge
-    newcmd = true;
-    cmdsent = false;
+  //play on/off toggle
+  select = digitalRead(select_pin);
+  if (select == HIGH && select != lastSelect) { // rising edge
+    conductor_task.enable();
   }
-  //
-  lastButton = button;
+  if (select == LOW && select != lastSelect) { // falling edge
+    conductor_task.disable();
+  }
+  lastSelect = select;
 
   // lcd
   const char runner[] = {'-', '|'};
@@ -128,17 +141,14 @@ void periodic() {
   }
   // second line
   lcd.setCursor(0, 1);
-  lcd.print("CMD:");   // 4
-  lcd.print(cmdstr);   // 10
-  if (cmdsent == true) {
-    lcd.print(":O"); // 2
+  if (select == HIGH) {
+    lcd.print("ON AIR!");   // 7
+    lcd.print("    "); // 11
   }
   else {
-    lcd.print(":X"); // 2
+    lcd.print("SLEEPING...");   // 11
   }
-
-  //TEST
-  Serial.println("HI?");
+  lcd.print((state ? "O" : "X")); // 12 - DEBUG, monitoring if task is running or not.
 }
 
 void loop() {
@@ -149,4 +159,6 @@ void loop() {
     //
     lastMillis = millis();
   }
+
+  taskrunner.execute();
 }
