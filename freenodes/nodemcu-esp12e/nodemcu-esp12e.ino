@@ -3,8 +3,54 @@
  *
  *   - a I2C Master that logs in to the mesh.
  *
- *   - soundmesh project @ 2018. 04.
+ *   - soundmesh project @ 2018. 04 ~ 06
  */
+
+#define BOARD_NODEMCU_ESP12E 1
+#define BOARD_NODEMCU_ESP12N 2
+#define BOARD_NODEMCU_ESP32  3
+
+/*
+ * Board
+ *
+ * ESP8266 (nodemcu-esp12e) status ==> Stable.
+ *
+ * ESP8266 (esp12n) status ==> Stable.
+ * Carefully select proper compiler/uploader setup @ arduino
+ *
+ * ESP32 status ==> Unstable.
+ * problem: i2c stabillity. + (mesh stability)
+ * trial #1: try stickbreaker's arduino-esp32 which is seriously targeting i2c stability
+ * trial #2: try encode/decode command bytes. to be single byte. seems RTOS running under the hood (hal) causing problem with i2c strict timing. so i feel good on single bytes according to people's talks.
+ * first thing first.. : confirm pinout. + stickbreaker (if not work/or unstable) + encode/decode in 1 byte. is my best effort. then we might have to consider different way for communication... sadly.
+ * a goooood article on esp32 subject.. possibilities.. potentials..!
+ *  --> https://mjrobot.org/iot-made-simple-playing-with-the-esp32-on-arduino-ide/
+ * pinout confirmation
+ * SDA ==> GPIO 21
+ * SCL ==> GPIO 22
+ * teensy 3.5 default
+ * SDA ==> 18
+ * SCL ==> 19
+ * so,
+ * esp32 ==> teensy 3.5
+ *  21 <==> 18
+ *  22 <==> 19
+ * and!
+ * NOTE: esp32 i2c function will drive bus pull-up on the fly! Don't use 3.3k pullups at teensy side! otherwise it won't work.
+ */
+#define BOARD_SELECT BOARD_NODEMCU_ESP12E
+
+/*
+ * Network
+ *
+ * define or undef MESH_ANCHOR : let this node be a 'root'-inclusion obsessive or simply free.
+ * anchors should be placed around 'root' to speed up mesh establishment and stabilize mesh integrity.
+ */
+#define MESH_SSID "soundmesh"
+#define MESH_PASSWORD "timemachine999"
+#define MESH_PORT 5555
+#define MESH_CHANNEL 5
+// #define MESH_ANCHOR
 
 // shared global (protocol) : begin
 //command (i2c)
@@ -21,13 +67,6 @@ bool newcmd = false;
 //libraries
 #include <Wire.h>
 #include <painlessMesh.h>
-
-//defines
-#define MESH_SSID "soundmesh"
-#define MESH_PASSWORD "timemachine999"
-#define MESH_PORT 5555
-#define MESH_CHANNEL 5
-// #define MESH_ANCHOR
 
 //i2c
 const int i2c_addr = 3;
@@ -52,13 +91,11 @@ Scheduler runner;
 //
 // 0 - booted. and running. no connection. scanning.
 // 1 - + connected.
-// 2 - + got a message.
 //
 // notifying patterns
 //
 // 0 - steady on
 // 1 - slow blinking (syncronized)
-// 2 - fast blinking for N times
 //
 #define LED_PIN 2 // built-in LED
 #define LED_PERIOD 1000
@@ -138,5 +175,9 @@ void setup() {
 void loop() {
   runner.execute();
   mesh.update();
-  digitalWrite(LED_PIN, !onFlag); // value == false is ON. so onFlag == true is ON. (pull-up)
+  if (BOARD_SELECT == BOARD_NODEMCU_ESP32) {
+    digitalWrite(LED_PIN, onFlag); // value == true is ON.
+  } else {
+    digitalWrite(LED_PIN, !onFlag); // value == false is ON. so onFlag == true is ON. (pull-up)
+  }
 }

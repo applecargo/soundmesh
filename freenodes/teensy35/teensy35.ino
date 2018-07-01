@@ -7,12 +7,31 @@
  *   - adding a motor on/off function. @ 2018. 06.
  */
 
-//problems:
-//  make many more
+//NOTE:Potential enhancements:
 //  enhancement on i2c protocol: start byte, CRC etc.
 //  fade-in/out when track change while isPlaying
 //  fade-out when track stops before actual end of track
 
+#define BOARD_TEENSY_35 1
+#define BOARD_TEENSY_32 2
+/*
+ * Board
+ *
+ */
+#define BOARD_SELECT BOARD_TEENSY_35
+
+/*
+ * My Group
+ *
+ * sub-group in the mesh
+ * F : flag objects
+ * C : circular objects
+ * D : drummer objects
+ *
+ * all members in the mesh
+ * A : all objects
+ */
+String mygroup = "C";
 
 // shared global (protocol) : begin
 //command (i2c)
@@ -26,14 +45,9 @@ bool cmdsent = false;
 bool newcmd = false;
 // shared global (protocol) : end
 
-//set my group
-String mygroup = "C"; //F : flag objects, C : circular objects, A : all objects
-//String mygroup = "F"; //F : flag objects, C : circular objects, A : all objects
-
 //HACK: let auto-poweroff speakers stay turned ON! - (creative muvo mini)
 #define IDLE_FREQ 22000
-//#define IDLE_AMP 0.0050
-#define IDLE_AMP 0 //feature off, since we have wallet power for all. (speakers stays ON while being charged.)
+#define IDLE_AMP 0.005
 
 //teensy audio
 #include <Audio.h>
@@ -42,6 +56,7 @@ String mygroup = "C"; //F : flag objects, C : circular objects, A : all objects
 #include <SD.h>
 #include <SerialFlash.h>
 
+#if (BOARD_SELECT == BOARD_TEENSY_35)
 //teensy 3.5 with SD card
 #define SDCARD_CS_PIN    BUILTIN_SDCARD
 #define SDCARD_MOSI_PIN  11  // not actually used
@@ -60,6 +75,23 @@ AudioConnection patchCord4(sine1, 0, mixer2, 1);
 AudioConnection patchCord5(mixer2, 0, dacs1, 1);
 AudioConnection patchCord6(mixer1, 0, dacs1, 0);
 // GUItool: end automatically generated code
+#elif (BOARD_SELECT == BOARD_TEENSY_32)
+//teensy 3.2 with SD card custom
+#define SDCARD_CS_PIN    10
+#define SDCARD_MOSI_PIN  11  // not actually used - ?
+#define SDCARD_SCK_PIN   14  // not actually used - ?
+
+// GUItool: begin automatically generated code
+AudioPlaySdWav playSdWav1;               //xy=398,327
+AudioSynthWaveformSine sine1;            //xy=410,423
+AudioMixer4 mixer1;                      //xy=658,383
+AudioOutputAnalog dac1;                  //xy=884,382
+AudioConnection patchCord1(playSdWav1, 0, mixer1, 0);
+AudioConnection patchCord2(sine1, 0, mixer1, 1);
+AudioConnection patchCord3(mixer1, dac1);
+// GUItool: end automatically generated code
+#endif
+
 
 //motor action (fan)
 #define MOTOR_PIN 3
@@ -103,6 +135,8 @@ void sound_player_check() {
     digitalWrite(13, LOW);
     //let speaker leave turned ON!
     sine1.amplitude(IDLE_AMP);
+    //fan stop
+    digitalWrite(MOTOR_PIN, LOW);
   }
   else {
     //let speaker leave turned ON!
@@ -231,6 +265,7 @@ void setup() {
   Wire.onReceive(receiveEvent);
   //Wire.onRequest(requestEvent);
 
+#if (BOARD_SELECT == BOARD_TEENSY_35)
   //SD - AudioPlaySdWav @ teensy audio library needs SD.begin() first. don't forget/ignore!
   //+ let's additionally check contents of SD.
   if (!SD.begin(BUILTIN_SDCARD)) {
@@ -251,6 +286,27 @@ void setup() {
   mixer2.gain(1,1);
   mixer2.gain(2,0);
   mixer2.gain(3,0);
+
+#elif (BOARD_SELECT == BOARD_TEENSY_32)
+  //SPI
+  SPI.setSCK(14);
+  //SD - AudioPlaySdWav @ teensy audio library needs SD.begin() first. don't forget/ignore!
+  //+ let's additionally check contents of SD.
+  if (!SD.begin(10)) {
+    Serial.println("[sd] initialization failed!");
+    // return;
+  }
+  Serial.println("[sd] initialization done.");
+  root = SD.open("/");
+  printDirectory(root, 0);
+
+  //audio
+  AudioMemory(20);
+  mixer1.gain(0,1);
+  mixer1.gain(1,1);
+  mixer1.gain(2,0);
+  mixer1.gain(3,0);
+#endif
 
   //let auto-poweroff speakers stay turned ON!
   sine1.frequency(IDLE_FREQ);
