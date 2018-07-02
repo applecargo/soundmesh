@@ -9,6 +9,9 @@
 //problems:
 //  enhancement on i2c protocol: start byte, CRC etc.
 
+#define DRUMMING_TEST true
+#define DRUMMING_TEST_INTERVAL 5000
+
 // shared global (protocol) : begin
 //command (i2c)
 #define CMD_LENGTH 10
@@ -35,15 +38,20 @@ Scheduler runner;
 #define HIT_ANGLE 130
 #define REST_ANGLE 40
 #define HIT_DELAY 100
-#define LR_DELAY 100
+#define LR_DELAY 200
 //callback prototypes
 void left_drum_hit();
 void left_drum_rest();
 void right_drum_hit();
 void right_drum_rest();
+void drumming_test();
 //tasks
 Task left_drum_task(0, TASK_ONCE, left_drum_rest);
 Task right_drum_task(0, TASK_ONCE, right_drum_rest);
+#if (DRUMMING_TEST == true)
+Task drumming_test_task(DRUMMING_TEST_INTERVAL, TASK_FOREVER, drumming_test, &runner, true);
+#endif
+
 //callbacks
 void left_drum_hit() {
   left_drum.write(HIT_ANGLE);
@@ -60,6 +68,14 @@ void right_drum_hit() {
 }
 void right_drum_rest() {
   right_drum.write(REST_ANGLE);
+}
+void drumming_test() {
+  //play left drum once.
+  left_drum_task.setCallback(left_drum_hit);
+  left_drum_task.restart();
+  //play right drum once.
+  right_drum_task.setCallback(right_drum_hit);
+  right_drum_task.restartDelayed(LR_DELAY);
 }
 
 //i2c
