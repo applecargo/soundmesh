@@ -175,9 +175,9 @@ void setup() {
 void loop() {
   runner.execute();
   mesh.update();
-  if (BOARD_SELECT == BOARD_NODEMCU_ESP32) {
-    digitalWrite(LED_PIN, onFlag); // value == true is ON.
-  } else {
-    digitalWrite(LED_PIN, !onFlag); // value == false is ON. so onFlag == true is ON. (pull-up)
-  }
+#if (BOARD_SELECT == BOARD_NODEMCU_ESP32)
+  digitalWrite(LED_PIN, onFlag); // value == true is ON.
+#else
+  digitalWrite(LED_PIN, !onFlag); // value == false is ON. so onFlag == true is ON. (pull-up)
+#endif
 }
