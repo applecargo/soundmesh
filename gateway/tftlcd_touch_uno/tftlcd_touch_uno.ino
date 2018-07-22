@@ -97,8 +97,6 @@ void setup(void) {
   Wire.begin(i2c_addr);
   Wire.onReceive(receiveEvent);
   Wire.onRequest(requestEvent);
-  // pinMode(18, INPUT_PULLUP);
-  // pinMode(19, INPUT_PULLUP);
 
   //tftlcd_touch
   tft.reset();
@@ -111,18 +109,15 @@ void setup(void) {
   tft.setTextColor(WHITE, BLACK);
 }
 
-int button_posX = 30;
-int button_posY = 120;
-int button_r = 20;
-int button1_posX = 80;
-int button1_posY = 120;
-int button1_r = 20;
-int button2_posX = 130;
-int button2_posY = 120;
-int button2_r = 20;
-int button3_posX = 180;
-int button3_posY = 120;
-int button3_r = 20;
+int button_r = 25;
+int button1_posX = 30;
+int button1_posY = 150;
+int button2_posX = 100;
+int button2_posY = 150;
+int button3_posX = 170;
+int button3_posY = 150;
+int button4_posX = 240;
+int button4_posY = 150;
 void periodic() {
 
   //tftlcd_touch
@@ -137,6 +132,7 @@ void periodic() {
   pinMode(YP, OUTPUT); //shared pin direction re-set (INPUT -> OUTPUT)
 
   //touch event handling
+  // Serial.println("pressure: " + String(p.z));
   if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
     // for rotation == 0
     // p.x = map(p.x, TS_MINX, TS_MAXX, tft.width(), 0);
@@ -149,29 +145,35 @@ void periodic() {
     Serial.println("(" + String(p.x) + ", " + String(p.y) + ")");
 
     //button 1
-    if (p.x > button_posX - button_r && p.x < button_posX + button_r) {
-      if (p.y > button_posY - button_r && p.y < button_posY + button_r) {
+    if (p.x > button1_posX - button_r && p.x < button1_posX + button_r) {
+      if (p.y > button1_posY - button_r && p.y < button1_posY + button_r) {
+        sprintf(cmdstr, "PLAY#001@A");
         newcmd = true;
         cmdsent = false;
-        // sprintf(cmdstr, "SENT");
       }
     }
     //button 2
-    if (p.x > button1_posX - button1_r && p.x < button1_posX + button1_r) {
-      if (p.y > button1_posY - button1_r && p.y < button1_posY + button1_r) {
-        sprintf(cmdstr, "PLAY#001@A");
+    if (p.x > button2_posX - button_r && p.x < button2_posX + button_r) {
+      if (p.y > button2_posY - button_r && p.y < button2_posY + button_r) {
+        sprintf(cmdstr, "PLAY#002@A");
+        newcmd = true;
+        cmdsent = false;
       }
     }
     //button 3
-    if (p.x > button2_posX - button2_r && p.x < button2_posX + button2_r) {
-      if (p.y > button2_posY - button2_r && p.y < button2_posY + button2_r) {
-        sprintf(cmdstr, "PLAY#002@A");
+    if (p.x > button3_posX - button_r && p.x < button3_posX + button_r) {
+      if (p.y > button3_posY - button_r && p.y < button3_posY + button_r) {
+        sprintf(cmdstr, "PLAY#003@A");
+        newcmd = true;
+        cmdsent = false;
       }
     }
     //button 4
-    if (p.x > button3_posX - button3_r && p.x < button3_posX + button3_r) {
-      if (p.y > button3_posY - button3_r && p.y < button3_posY + button3_r) {
-        sprintf(cmdstr, "PLAY#003@A");
+    if (p.x > button4_posX - button_r && p.x < button4_posX + button_r) {
+      if (p.y > button4_posY - button_r && p.y < button4_posY + button_r) {
+        sprintf(cmdstr, "STOP#SSS@A");
+        newcmd = true;
+        cmdsent = false;
       }
     }
   }
@@ -227,10 +229,10 @@ void periodic() {
   }
 
   // widget
-  tft.fillCircle(button_posX, button_posY, button_r, YELLOW);
   tft.fillCircle(button1_posX, button1_posY, button_r, YELLOW);
-  tft.fillCircle(button2_posX, button2_posY, button_r, YELLOW);
-  tft.fillCircle(button3_posX, button3_posY, button_r, YELLOW);
+  tft.fillCircle(button2_posX, button2_posY, button_r, GREEN);
+  tft.fillCircle(button3_posX, button3_posY, button_r, BLUE);
+  tft.fillCircle(button4_posX, button4_posY, button_r, RED);
 }
 
 void loop() {

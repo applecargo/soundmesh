@@ -181,19 +181,19 @@ void drumming_scheduler() {
     //increasing speed
     int d = hitcount / 15;
     switch (d) {
-      case 0:
+    case 0:
       del = 2000; // 2 sec x 15 = 30
       break;
-      case 1:
+    case 1:
       del = 1800; // 1.8 sec x 15 = 27
       break;
-      case 2:
+    case 2:
       del = 1500; // 1.5 sec x 15 = 22.5
       break;
-      case 3:
+    case 3:
       del = 1000; // 1 sec x 15 = 15
       break;
-      default:
+    default:
       del = 1000; //above == 94.5 sec. (60 times) + 15.5 sec. (15 times) more.
     }
 
@@ -246,7 +246,11 @@ void receiveEvent(int numBytes) {
         drumming_scheduler_task.restart();
       }
       else if (cmd.equals("STOP")) {
-        //NOTE: we don't have a 'STOP' messages in the net. ! (yet or forever)
+        //invalid song name will gracefully stop the scheduler
+        playing_song = "";
+        hitcount = 0;
+        isstarted = true;
+        drumming_scheduler_task.restart();
       }
     }
   }
