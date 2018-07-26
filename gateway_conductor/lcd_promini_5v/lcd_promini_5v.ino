@@ -47,7 +47,8 @@ void requestEvent() {
 const int Ncommands = 3;
 String commandlist[Ncommands] = {
   "PLAY#001@A",
-  "PLAY#002@A"
+  "PLAY#002@A",
+  "PLAY#003@A",
 };
 
 //task
