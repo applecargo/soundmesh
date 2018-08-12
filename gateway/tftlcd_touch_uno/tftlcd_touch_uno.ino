@@ -20,6 +20,7 @@ bool newcmd = false;
 
 //libraries
 #include <Wire.h>
+#include <Firmata.h>
 
 //tftlcd_touch
 #include <Adafruit_GFX.h>    // Core graphics library
@@ -88,6 +89,26 @@ float mapping(float val, float from_start, float from_end, float to_start, float
   return (val - from_start) * (to_end - to_start) / (from_end - from_start) + to_start;
 }
 
+//firmata
+void analogWriteCallback(byte pin, int value){
+  if (pin == 10) {
+    //DEBUG
+    //sprintf(cmdstr, "p:%d,v:%d", pin, value);
+
+    //COMMAND
+    if (value == 0) { // 0 - STOP
+      sprintf(cmdstr, "STOP#000@A", value);
+      newcmd = true;
+      cmdsent = false;
+    }
+    else {
+      sprintf(cmdstr, "PLAY#%03d@A", value);
+      newcmd = true;
+      cmdsent = false;
+    }
+  }
+}
+
 void setup(void) {
 
   //serial
@@ -107,6 +128,12 @@ void setup(void) {
   tft.setTextSize(2);
   tft.setCursor(0, 0);
   tft.setTextColor(WHITE, BLACK);
+
+  //firmata
+  Firmata.setFirmwareVersion(0,1);
+  Firmata.attach(ANALOG_MESSAGE, analogWriteCallback);
+  Firmata.begin(57600);
+
 }
 
 int button_r = 25;
@@ -124,6 +151,8 @@ void periodic() {
 
   //enable & get touch values
   digitalWrite(13, HIGH);
+  pinMode(XM, INPUT); //shared pin direction re-set (OUTPUT -> INPUT)
+  pinMode(YP, INPUT); //shared pin direction re-set (OUTPUT -> INPUT)
   TSPoint p = ts.getPoint();
 
   //disable & set screen changes
@@ -242,5 +271,9 @@ void loop() {
     periodic();
     //
     lastMillis = millis();
+  }
+
+  while (Firmata.available()) {
+    Firmata.processInput();
   }
 }
