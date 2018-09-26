@@ -136,15 +136,21 @@ void setup(void) {
 
 }
 
-int button_r = 25;
+int button_r = 20;
 int button1_posX = 30;
-int button1_posY = 150;
+int button1_posY = 130;
 int button2_posX = 100;
-int button2_posY = 150;
+int button2_posY = 130;
 int button3_posX = 170;
-int button3_posY = 150;
-int button4_posX = 240;
-int button4_posY = 150;
+int button3_posY = 130;
+int button4_posX = 30;
+int button4_posY = 180;
+int button5_posX = 100;
+int button5_posY = 180;
+int button6_posX = 170;
+int button6_posY = 180;
+int buttonSTOP_posX = 240;
+int buttonSTOP_posY = 155;
 void periodic() {
 
   //tftlcd_touch
@@ -200,6 +206,30 @@ void periodic() {
     //button 4
     if (p.x > button4_posX - button_r && p.x < button4_posX + button_r) {
       if (p.y > button4_posY - button_r && p.y < button4_posY + button_r) {
+        sprintf(cmdstr, "PLAY#004@A");
+        newcmd = true;
+        cmdsent = false;
+      }
+    }
+    //button 5
+    if (p.x > button5_posX - button_r && p.x < button5_posX + button_r) {
+      if (p.y > button5_posY - button_r && p.y < button5_posY + button_r) {
+        sprintf(cmdstr, "PLAY#005@A");
+        newcmd = true;
+        cmdsent = false;
+      }
+    }
+    //button 6
+    if (p.x > button6_posX - button_r && p.x < button6_posX + button_r) {
+      if (p.y > button6_posY - button_r && p.y < button6_posY + button_r) {
+        sprintf(cmdstr, "PLAY#006@A");
+        newcmd = true;
+        cmdsent = false;
+      }
+    }
+    //button STOP
+    if (p.x > buttonSTOP_posX - button_r && p.x < buttonSTOP_posX + button_r) {
+      if (p.y > buttonSTOP_posY - button_r && p.y < buttonSTOP_posY + button_r) {
         sprintf(cmdstr, "STOP#SSS@A");
         newcmd = true;
         cmdsent = false;
@@ -261,7 +291,10 @@ void periodic() {
   tft.fillCircle(button1_posX, button1_posY, button_r, YELLOW);
   tft.fillCircle(button2_posX, button2_posY, button_r, GREEN);
   tft.fillCircle(button3_posX, button3_posY, button_r, BLUE);
-  tft.fillCircle(button4_posX, button4_posY, button_r, RED);
+  tft.fillCircle(button4_posX, button4_posY, button_r, CYAN);
+  tft.fillCircle(button5_posX, button5_posY, button_r, MAGENTA);
+  tft.fillCircle(button6_posX, button6_posY, button_r, WHITE);
+  tft.fillCircle(buttonSTOP_posX, buttonSTOP_posY, button_r, RED);
 }
 
 void loop() {
