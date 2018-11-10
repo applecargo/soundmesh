@@ -113,7 +113,10 @@ void sound_player_start()
   //TEST
   Serial.println(filename);
   //start the player!
-  playSdWav1.play(filename);
+  //NOTE: block out 're-triggering'
+  if (playSdWav1.isPlaying() == false) {
+    playSdWav1.play(filename);
+  }
   //mark the indicator : HIGH: ON
   digitalWrite(13, HIGH);
   //fan action
@@ -278,12 +281,13 @@ void setup() {
 
   //audio
   AudioMemory(20);
-  mixer1.gain(0,1);
-  mixer1.gain(1,1);
+  //NOTE:reduced volume
+  mixer1.gain(0,0.7);
+  mixer1.gain(1,0.7);
   mixer1.gain(2,0);
   mixer1.gain(3,0);
-  mixer2.gain(0,1);
-  mixer2.gain(1,1);
+  mixer2.gain(0,0.7);
+  mixer2.gain(1,0.7);
   mixer2.gain(2,0);
   mixer2.gain(3,0);
 
@@ -321,8 +325,22 @@ void setup() {
 
   //
   Serial.println("[setup] done.");
+
+  // //DEBUG: simple looping play all.
+  // song_now = 0;
 }
 
 void loop() {
   runner.execute();
+
+  // //DEBUG: simple looping play all.
+  // if (playSdWav1.isPlaying() == false) {
+  //   song_now += 1;
+  //   if (song_now > 6) {
+  //     song_now = 1;
+  //   }
+  //   sound_player_start_task.restart();
+  //   delay(200);
+  // }
+
 }
